@@ -20,7 +20,7 @@ use Class::Accessor::Lite
     ) ]
 ;
 
-our $VERSION = '0.01';
+our $VERSION = '1.00';
 
 sub new {
     my $class = shift;
