@@ -25,6 +25,11 @@ our $VERSION = '0.01';
 sub new {
     my $class = shift;
 
+    # Grr, allow hashrefs
+    if (@_ == 1 && ref $_[0] eq 'HASH') {
+        @_ = %{$_[0]};
+    }
+
     # Only exists to provide back compat with non-published version.
     # You shouldn't be using this
     if ( @_ == 2 && ! ref $_[0] && ref $_[1] eq 'HASH' ) {
@@ -45,16 +50,23 @@ sub new {
     return $self;
 }
 
+sub _qualify_url {
+    my ($self, $url) = @_;
+
+    my $prefix = $self->url;
+    if (! $prefix) {
+        return $url;
+    }
+
+    return URI->new($url)->abs($prefix)->canonical;
+}
+
 sub get_object {
     my ($self, $url, $opts) = @_;
 
     $self->error(undef);
 
-    if ( $url !~ m{^https?://}i && ( my $prefix = $self->url ) ) {
-        $prefix =~ s/\/$//;
-        $url =~ s/^\///;
-        $url = URI->new("$prefix/$url")->canonical;
-    }
+    $url = $self->_qualify_url($url);
 
     my %furlopts = (
         method => 'GET',
@@ -123,11 +135,7 @@ sub put_object {
         push @hdrs, "X-STF-Consistency", $consistency;
     }
 
-    if ( $url !~ m{^http://}i && ( my $prefix = $self->url ) ) {
-        $prefix =~ s/\/$//;
-        $url =~ s/^\///;
-        $url = URI->new("$prefix/$url")->canonical;
-    }
+    $url = $self->_qualify_url($url);
 
     my %furlopts = (
         method  => 'PUT',
@@ -155,11 +163,7 @@ sub delete_object {
 
     $self->error(undef);
 
-    if ( $url !~ m{^http://}i && ( my $prefix = $self->url ) ) {
-        $prefix =~ s/\/$//;
-        $url =~ s/^\///;
-        $url = URI->new("$prefix/$url")->canonical;
-    }
+    $url = $self->_qualify_url($url);
 
     my %furlopts = (
         method => 'DELETE',
@@ -178,11 +182,7 @@ sub create_bucket {
 
     $self->error(undef);
 
-    if ( $url !~ m{^http://}i && ( my $prefix = $self->url ) ) {
-        $prefix =~ s/\/$//;
-        $url =~ s/^\///;
-        $url = URI->new("$prefix/$url")->canonical;
-    }
+    $url = $self->_qualify_url($url);
 
     my %furlopts = (
         method => 'PUT',
@@ -210,11 +210,7 @@ sub delete_bucket {
         push @hdrs, "X-STF-Recursive-Delete" => "true";
     }
 
-    if ( $url !~ m{^http://}i && ( my $prefix = $self->url ) ) {
-        $prefix =~ s/\/$//;
-        $url =~ s/^\///;
-        $url = URI->new("$prefix/$url")->canonical;
-    }
+    $url = $self->_qualify_url($url);
 
     my %furlopts = (
         method  => 'DELETE',
