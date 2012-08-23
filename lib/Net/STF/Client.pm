@@ -50,6 +50,24 @@ sub new {
     return $self;
 }
 
+sub _url_is_object {
+    # Make sure the URL contains more than one level in its path.
+    # Otherwise, you may end up getting stuff like
+    #   DELETE http://stf.example.com/foo/
+    # instead of
+    #   DELETE http://stf.example.com/foo/bar
+    # The former deletes the BUCKET, whereas the latter deletes the object.
+
+    # XXX regex copied from URI.pm
+
+    my (undef, undef, $path) = 
+        $_[0] =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?|;
+    if ($path =~ m{^/+[^/]+(?:/+[\./]*)?$}) {
+        Carp::croak("Invalid object URL given -> $_[0]");
+    }
+    1;
+}
+
 sub _qualify_url {
     my ($self, $url) = @_;
 
@@ -110,6 +128,9 @@ sub put_object {
 
     $self->error(undef);
 
+    $url = $self->_qualify_url($url);
+    _url_is_object($url);
+
     if (! defined $content ) {
         Carp::croak( "No content provided" );
     }
@@ -135,7 +156,6 @@ sub put_object {
         push @hdrs, "X-STF-Consistency", $consistency;
     }
 
-    $url = $self->_qualify_url($url);
 
     my %furlopts = (
         method  => 'PUT',
@@ -164,21 +184,7 @@ sub delete_object {
     $self->error(undef);
 
     $url = $self->_qualify_url($url);
-
-    # Make sure the URL contains more than one level in its path.
-    # Otherwise, you may end up getting stuff like
-    #   http://stf.example.com/foo/
-    # instead of
-    #   http://stf.example.com/foo/bar
-    # The former deletes the BUCKET, whereas the latter deletes the object.
-
-    # XXX regex copied from URI.pm
-
-    my (undef, undef, $path) = 
-        $url =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?|;
-    if ($path =~ m{^/+[^/]+(?:/+[\./]*)?$}) {
-        Carp::croak("Invalid URL given to delete_object() -> $url");
-    }
+    _url_is_object($url);
 
     my %furlopts = (
         method => 'DELETE',
