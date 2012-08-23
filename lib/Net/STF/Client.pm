@@ -165,6 +165,21 @@ sub delete_object {
 
     $url = $self->_qualify_url($url);
 
+    # Make sure the URL contains more than one level in its path.
+    # Otherwise, you may end up getting stuff like
+    #   http://stf.example.com/foo/
+    # instead of
+    #   http://stf.example.com/foo/bar
+    # The former deletes the BUCKET, whereas the latter deletes the object.
+
+    # XXX regex copied from URI.pm
+
+    my (undef, undef, $path) = 
+        $url =~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?|;
+    if ($path =~ m{^/+[^/]+(?:/+[\./]*)?$}) {
+        Carp::croak("Invalid URL given to delete_object() -> $url");
+    }
+
     my %furlopts = (
         method => 'DELETE',
         url    => $url,
