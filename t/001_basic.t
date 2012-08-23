@@ -20,6 +20,13 @@ my $server = Test::TCP->new(
                 if ( $path_info =~ m{^/([^/]+)(/.+)?$} ) {
                     my ($bucket_name, $object_name) = ($1, $2);
                     if ( ! $object_name ) {
+                        if (! exists $env->{CONTENT_LENGTH}) {
+                            return [ 500, [ 'content-type' => 'text/plain' ], [ 'content-length required' ] ];
+                        }
+                        if ($env->{CONTENT_LENGTH} != 0) {
+                            return [ 500, [ 'content-type' => 'text/plain' ], [ 'content-length invalid' ] ];
+                        }
+
                         $BUCKETS{$bucket_name} ||= {};
                         return  [ 201, [], [] ];
                     } else {

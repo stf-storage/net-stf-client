@@ -187,6 +187,9 @@ sub create_bucket {
     my %furlopts = (
         method => 'PUT',
         url    => $url,
+        headers => [
+            'Content-Length' => 0,
+        ],
     );
     my @res = $self->send_request( \%furlopts, $opts );
     if (! HTTP::Status::is_success( $res[1] ) ) {
